@@ -29,10 +29,20 @@ export const songSlice = createSlice({
     removeFromHistory: (state) => {
       state.history.pop();
     },
+    restoreShuffleState: (state, action) => {
+      state.shuffle = action.payload.shuffle;
+      state.history = action.payload.history || [];
+    },
   },
 });
 
-export const { addSong, playAndPause, toggleshuffle, addToHistory ,  removeFromHistory } =
-  songSlice.actions;
+export const {
+  addSong,
+  playAndPause,
+  toggleshuffle,
+  addToHistory,
+  removeFromHistory,
+  restoreShuffleState,
+} = songSlice.actions;
 
 export default songSlice.reducer;

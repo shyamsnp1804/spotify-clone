@@ -6,6 +6,7 @@ import {
   addToHistory,
   playAndPause,
   removeFromHistory,
+  restoreShuffleState,
   toggleshuffle,
 } from "../features/songSlice";
 import moment from "moment";
@@ -90,7 +91,7 @@ const PlayerFooter = () => {
     }
 
     dispatch(addSong(songs[nextIndex]));
-  },[currentSong, songs, shuffle, dispatch]);
+  }, [currentSong, songs, shuffle, dispatch]);
 
   const handleBackwardSong = useCallback(() => {
     if (!currentSong) return;
@@ -113,7 +114,7 @@ const PlayerFooter = () => {
     const previousIndex = (index - 1 + songs.length) % songs.length;
 
     dispatch(addSong(songs[previousIndex]));
-  },[currentSong, songs, shuffle, dispatch, history]);
+  }, [currentSong, songs, shuffle, dispatch, history]);
 
   //autoplay next song
   const handleAutoPlay = () => {
@@ -144,6 +145,55 @@ const PlayerFooter = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [dispatch, handleForwardSong, handleBackwardSong]);
+
+  useEffect(() => {
+    if (!currentSong || !audioRef.current) return;
+
+    const savedState = {
+      song: currentSong,
+      time: audioRef.current.currentTime,
+      isPlaying,
+      shuffle,
+      history,
+    };
+
+    localStorage.setItem("player_state", JSON.stringify(savedState));
+  }, [currentSong, isPlaying, shuffle, history, currentTime]);
+
+useEffect(() => {
+  const saved = localStorage.getItem("player_state");
+  if (!saved) return;
+
+  const data = JSON.parse(saved);
+
+  // verify song still exists
+  const exists = songs.find(s => s.id === data.song.id);
+  if (!exists) return;
+
+  // 1️⃣ restore song into redux
+  dispatch(addSong(data.song));
+
+  // 2️⃣ restore shuffle + history
+  dispatch(restoreShuffleState({
+    shuffle: data.shuffle,
+    history: data.history
+  }));
+
+  // 3️⃣ wait for audio to load → restore time
+  setTimeout(() => {
+    if (!audioRef.current) return;
+
+    audioRef.current.currentTime = data.time || 0;
+
+    // resume only if it was playing
+    if (data.isPlaying) {
+      audioRef.current.play().catch(() => {});
+    }
+
+  }, 300);
+
+}, []);
+
 
   return (
     <div className="h-[12%] w-full bg-black flex">
